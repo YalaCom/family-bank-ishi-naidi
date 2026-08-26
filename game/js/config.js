@@ -34,9 +34,9 @@
     MAX_ZOOM: 3.2,
     START_ZOOM_EXTRA: 1.08,
     OBJECT_BASE_SIZE: 82,
-    HIT_PADDING: 18,
-    DECOY_COUNT: 13,
-    MIN_SPAWN_DISTANCE: 0.09,
+    HIT_PADDING: 12,
+    DECOY_COUNT: 16,
+    MIN_SPAWN_DISTANCE: 0.06,
 
     /* Камера / ввод */
     PAN_TAP_SLOP: 12,
