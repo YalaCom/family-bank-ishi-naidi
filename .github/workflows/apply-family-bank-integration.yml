@@ -1,0 +1,42 @@
+name: Apply Family Bank game hard mode
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - apply-family-bank-integration.mjs
+      - .github/workflows/apply-family-bank-integration.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Apply hard-mode map tuning
+        run: node apply-family-bank-integration.mjs
+      - name: Validate game JavaScript
+        run: |
+          node --check game/game.js
+          node --check game/js/data.js
+          node --check game/js/config.js
+      - name: Commit generated game changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add game/js/data.js game/js/config.js game/game.css
+          if git diff --cached --quiet; then
+            echo "No generated changes"
+          else
+            git commit -m "Tune Ishi-naidi hard mode for Family Bank"
+            git push
+          fi
