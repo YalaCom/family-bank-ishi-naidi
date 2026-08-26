@@ -7,6 +7,7 @@ on:
     paths:
       - apply-family-bank-integration.mjs
       - generate-server-manifest.mjs
+      - patch-server-round.mjs
       - .github/workflows/apply-family-bank-integration.yml
   workflow_dispatch:
 
@@ -25,6 +26,8 @@ jobs:
           node-version: '24'
       - name: Apply hard-mode map tuning
         run: node apply-family-bank-integration.mjs
+      - name: Apply server-authoritative round flow
+        run: node patch-server-round.mjs
       - name: Generate server validation manifest
         run: node generate-server-manifest.mjs
       - name: Validate game JavaScript
@@ -36,7 +39,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add game/js/data.js game/js/config.js game/game.css game/server-manifest.json
+          git add game/game.js game/js/data.js game/js/config.js game/game.css game/server-manifest.json
           if git diff --cached --quiet; then
             echo "No generated changes"
           else
