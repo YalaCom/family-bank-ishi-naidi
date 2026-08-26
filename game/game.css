@@ -664,3 +664,7 @@ img { display: block; max-width: 100%; }
     margin-bottom: 24px;
   }
 }
+
+
+.bank-back{position:absolute;z-index:20;top:calc(12px + env(safe-area-inset-top));left:14px;border:1px solid rgba(255,255,255,.16);background:rgba(20,28,22,.78);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:#fff;padding:9px 13px;border-radius:14px;font:700 13px/1.1 inherit;letter-spacing:.1px}
+.bank-back:active{transform:scale(.97)}

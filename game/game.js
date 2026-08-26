@@ -916,7 +916,8 @@
 
     if (C.CONSUME_ATTEMPT_ON_START) {
       save.attemptsUsed += 1;
-      if (typeof host.attemptsLeft === "number") host.attemptsLeft = Math.max(0, host.attemptsLeft - 1);
+      // Backend Family Bank already consumes a real attempt when it issues a server round.
+      if (host.demo && typeof host.attemptsLeft === "number") host.attemptsLeft = Math.max(0, host.attemptsLeft - 1);
     }
     save.inProgress = { roundId: r.id, startedAt: r.startedAt };
     persist();
@@ -1057,6 +1058,9 @@
   /* Boot                                                                */
   /* ------------------------------------------------------------------ */
   function bind() {
+    $("btn-bank-back").addEventListener("click", function () {
+      location.href = "/";
+    });
     $("btn-play").addEventListener("click", function () {
       tryPlay();
     });
@@ -1150,6 +1154,89 @@
     });
   }
 
+  // FAMILY_BANK_SAME_ORIGIN_V1 — game is served by the Family Bank Worker at /game/.
+  function bankInitData() {
+    let value = "";
+    try { if (host.telegram && host.telegram.initData) value = host.telegram.initData; } catch (_) {}
+    if (!value) {
+      try { value = sessionStorage.getItem("familybank_init_data") || ""; } catch (_) {}
+    }
+    return value;
+  }
+
+  function userIdFromInitData(initData) {
+    try {
+      const p = new URLSearchParams(initData || "");
+      const u = JSON.parse(p.get("user") || "null");
+      return u && u.id ? String(u.id) : null;
+    } catch (_) { return null; }
+  }
+
+  async function bankApi(path, payload) {
+    const initData = bankInitData();
+    if (!initData) throw new Error("Открой игру из Family Bank");
+    const r = await fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Telegram-Init-Data": initData },
+      body: JSON.stringify(payload || {}),
+    });
+    let data = {};
+    try { data = await r.json(); } catch (_) {}
+    if (!r.ok || data.ok === false) throw new Error(data.error || "Ошибка Family Bank");
+    return data;
+  }
+
+  function installFamilyBankBackend() {
+    const initData = bankInitData();
+    if (!initData) return false;
+
+    host.demo = false;
+    const uid = userIdFromInitData(initData);
+    if (uid) host.userId = uid;
+    host.attemptsMax = 2;
+    host.displayReward = 15;
+    host.displayCurrency = "₽";
+
+    host.onRoundStart = async function () {
+      return bankApi("/api/game/start", { game: C.GAME_ID });
+    };
+
+    host.onResult = function (payload) {
+      let tries = 0;
+      const send = function () {
+        tries += 1;
+        bankApi("/api/game/complete", payload).then(function (res) {
+          if (typeof res.attemptsLeft === "number") host.attemptsLeft = Math.max(0, res.attemptsLeft);
+          if (res.dayKey) host.dayKey = res.dayKey;
+          if (res.nextResetAt) host.nextResetAt = res.nextResetAt;
+          if (payload.result === "win") toast(res.rewarded ? "+" + (res.reward || 15) + " ₽ начислено" : "Победа уже учтена");
+          refreshHome();
+        }).catch(function () {
+          if (tries < 3) window.setTimeout(send, 800 * tries);
+          else if (payload.result === "win") toast("Не удалось подтвердить награду");
+        });
+      };
+      send();
+    };
+
+    bankApi("/api/game/state", { game: C.GAME_ID }).then(function (res) {
+      if (typeof res.attemptsLeft === "number") host.attemptsLeft = Math.max(0, res.attemptsLeft);
+      if (typeof res.attemptsMax === "number") host.attemptsMax = res.attemptsMax;
+      if (res.dayKey) host.dayKey = res.dayKey;
+      if (res.nextResetAt) host.nextResetAt = res.nextResetAt;
+      if (res.reward != null) host.displayReward = res.reward;
+      save = loadSave(host.userId || C.DEMO_USER_ID);
+      save.userId = host.userId || C.DEMO_USER_ID;
+      persist();
+      refreshHome();
+    }).catch(function () {
+      host.attemptsLeft = 0;
+      refreshHome();
+      toast("Нет связи с Family Bank");
+    });
+    return true;
+  }
+
   function boot() {
     reducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     host.telegram = detectTelegram();
@@ -1160,6 +1247,7 @@
     const q = new URLSearchParams(location.search);
     if (q.get("demo") === "1") host.demo = true;
     if (q.get("user")) host.userId = q.get("user");
+    if (q.get("demo") !== "1") installFamilyBankBackend();
 
     save = loadSave(host.userId || C.DEMO_USER_ID);
     bind();
