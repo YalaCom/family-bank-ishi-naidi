@@ -1,0 +1,55 @@
+Ищи-найди — Family Bank
+Полный исходный модуль. Ничего не минифицировано.
+
+ИСХОДНЫЙ КОД (открытый, читаемый)
+──────────────────────────────────
+  index.html          158 строк   экраны: дом, правила, попытки, игра, пауза, победа, проигрыш, лимит
+  game.css            663 строки  тема, камера, HUD, safe-area, мобильная вёрстка
+  game.js            1117 строк   движок:
+                                  • IIFE, закрытый round (win() из консоли не работает)
+                                  • камера pan / pinch / wheel / double-tap
+                                  • спавн цели + 13 декораций по зонам
+                                  • 3 ошибки / 90 сек / 1 подсказка
+                                  • 2 попытки в сутки, localStorage демо
+                                  • proof (djb2) + FamilyBankGame / FamilyBankHost
+                                  • Web Audio, Telegram WebApp
+  js/config.js         56 строк   все константы
+  js/data.js          215 строк   39 предметов, 6 карт, точки спавна с зонами
+
+ДОКУМЕНТЫ
+─────────
+  README.md
+  INTEGRATION.md      как встроить в Family Bank, API победы/проигрыша
+  GAME_CONFIG.md      все настройки
+  CONTENTS.txt        этот файл
+
+КАРТЫ 16:9  (assets/maps/)
+──────────────────────────
+  village.jpg   Деревня
+  park.jpg      Парк
+  forest.jpg    Лес
+  farm.jpg      Ферма
+  yard.jpg      Двор
+  market.jpg    Ярмарка
+
+ПРЕДМЕТЫ PNG с прозрачностью  (assets/objects/)  — 39 шт.
+────────────────────────────────────────────────────────
+  Животные: frog duck cat hedgehog squirrel butterfly owl fish goose
+  Игрушки:  ball teddy doll toy_car balloon dino rubber_duck spinning_top toy_boat
+  Инструменты: shovel pitchfork rake bucket flashlight watering_can hammer rope
+  Ферма/еда/природа: crate mushroom apple lemonade flower shell
+  Вещи: key boot hat basket jar lantern golden_key (редкий)
+
+ПРОЧЕЕ
+──────
+  assets/ui/hero.jpg
+  assets/fonts/Nunito-Variable.ttf
+
+КАК ОТКРЫТЬ
+───────────
+  Откройте game/index.html в браузере (демо без Telegram).
+  На телефоне: портрет, палец двигает карту, щипок зумит.
+
+  Хост Family Bank: см. INTEGRATION.md
+    window.FamilyBankGame.init({ userId, attemptsLeft, onResult })
+    window.FamilyBankGame.win() из консоли ИГНОРИРУЕТСЯ.

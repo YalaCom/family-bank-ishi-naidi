@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#1c241e" />
+  <title>Ищи-найди — Family Bank</title>
+  <link rel="stylesheet" href="game.css" />
+</head>
+<body>
+  <div id="app">
+    <section id="screen-load" class="screen" data-screen="load" hidden>
+      <div class="load-mark" aria-hidden="true"></div>
+      <p>Загружаем карты</p>
+    </section>
+
+    <section id="screen-home" class="screen active" data-screen="home">
+      <div class="home-hero">
+        <img src="assets/ui/hero.jpg" alt="" />
+      </div>
+      <div class="brand">
+        <h1>Ищи-найди</h1>
+        <p>Family Bank</p>
+      </div>
+      <div class="chip-row">
+        <div class="chip" id="chip-attempts"><span class="dot"></span><span id="attempts-label">2 / 2</span></div>
+        <div class="chip muted" id="chip-wins">Наград: 0</div>
+      </div>
+      <div class="home-actions">
+        <button class="btn btn-primary" id="btn-play" type="button">Играть</button>
+        <div class="btn-row">
+          <button class="btn btn-ghost" id="btn-rules" type="button">Правила</button>
+          <button class="btn btn-ghost" id="btn-attempts" type="button">Мои попытки</button>
+        </div>
+      </div>
+      <div class="demo-flag" id="demo-flag" hidden>Демо-режим · без Telegram</div>
+    </section>
+
+    <section id="screen-rules" class="screen" data-screen="rules">
+      <div class="sheet">
+        <h2>Как играть</h2>
+        <div class="rule-step"><div class="rule-num">1</div><p>На большой карте спрятан один предмет. Его картинка — внизу экрана.</p></div>
+        <div class="rule-step"><div class="rule-num">2</div><p>Двигайте карту пальцем, щипком приближайте. Ищите глазами — предмет стоит в логичном месте.</p></div>
+        <div class="rule-step"><div class="rule-num">3</div><p>Нажмите точно на нужный предмет. Три ошибки по чужим предметам — раунд проигран.</p></div>
+        <div class="rule-step"><div class="rule-num">4</div><p>Две попытки в сутки. Награда за победу начисляется Family Bank, не игрой.</p></div>
+        <p>Один раз за раунд можно взять подсказку — камера подскажет сторону, но не точку.</p>
+        <div class="close-row"><button class="btn btn-primary" id="btn-rules-close" type="button" style="width:100%">Понятно</button></div>
+      </div>
+    </section>
+
+    <section id="screen-attempts" class="screen" data-screen="attempts">
+      <div class="sheet">
+        <h2>Мои попытки</h2>
+        <div class="stat-grid">
+          <div class="stat-card"><b id="st-left">2 / 2</b><span>осталось сегодня</span></div>
+          <div class="stat-card"><b id="st-wins">0</b><span>побед всего</span></div>
+        </div>
+        <p id="st-reset">Обновление попыток в полночь по вашему времени.</p>
+        <p style="margin-top:16px;font-weight:700;color:var(--ink)">Коллекция найденного</p>
+        <div class="found-grid" id="found-grid"></div>
+        <div class="close-row"><button class="btn btn-primary" id="btn-attempts-close" type="button" style="width:100%">Закрыть</button></div>
+      </div>
+    </section>
+
+    <section id="screen-play" class="screen" data-screen="play">
+      <div id="viewport">
+        <div id="world">
+          <img id="map-bg" alt="" draggable="false" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" />
+          <div id="objects-layer"></div>
+        </div>
+      </div>
+      <div class="hud-top">
+        <button class="icon-btn" id="btn-pause" type="button" aria-label="Пауза">
+          <svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/></svg>
+        </button>
+        <div class="hud-pill grow"><span class="map-name" id="hud-map">Карта</span></div>
+        <div class="hud-pill" id="hud-time">1:30</div>
+        <div class="hud-pill" aria-label="Ошибки"><span class="hearts" id="hud-hearts"></span></div>
+      </div>
+      <div class="tray" id="tray">
+        <div class="tray-art"><img id="target-img" alt="" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" /></div>
+        <div class="tray-copy">
+          <small>Найди этот предмет</small>
+          <b id="target-name">—</b>
+        </div>
+        <div class="tray-actions">
+          <button class="icon-btn" id="btn-hint" type="button" aria-label="Подсказка">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3-3"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="toast" id="toast"></div>
+    </section>
+
+    <section id="screen-pause" class="screen" data-screen="pause">
+      <div class="result-card">
+        <h2>Пауза</h2>
+        <p>Раунд уже начат — выход засчитывается как использованную попытку.</p>
+        <div class="result-actions">
+          <button class="btn btn-primary" id="btn-resume" type="button">Продолжить</button>
+          <button class="btn btn-ghost" id="btn-quit" type="button">Выйти</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="screen-win" class="screen" data-screen="win">
+      <div class="result-card">
+        <div class="badge" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+        </div>
+        <h2>Предмет найден</h2>
+        <p id="win-copy">Отлично! Сообщаем Family Bank о победе.</p>
+        <div class="reward" id="win-reward">+15 <small>₽</small></div>
+        <p id="win-left" style="margin-bottom:16px">Осталось попыток: 1</p>
+        <div class="result-actions">
+          <button class="btn btn-primary" id="btn-play-again" type="button">Сыграть ещё</button>
+          <button class="btn btn-ghost" id="btn-win-home" type="button">На главную</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="screen-lose" class="screen" data-screen="lose">
+      <div class="result-card">
+        <div class="badge lose" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </div>
+        <h2 id="lose-title">Раунд окончен</h2>
+        <p id="lose-copy">Предмет так и остался спрятан.</p>
+        <p id="lose-left" style="margin:12px 0 16px">Осталось попыток: 1</p>
+        <div class="result-actions">
+          <button class="btn btn-primary" id="btn-lose-again" type="button">Сыграть ещё</button>
+          <button class="btn btn-ghost" id="btn-lose-home" type="button">На главную</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="screen-limit" class="screen" data-screen="limit">
+      <div class="result-card">
+        <div class="badge limit" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v5l3 2"/></svg>
+        </div>
+        <h2>Сегодня попытки закончились</h2>
+        <p>Приходи завтра — лимит обновится.</p>
+        <div class="countdown" id="limit-cd">00:00:00</div>
+        <div class="result-actions">
+          <button class="btn btn-primary" id="btn-limit-home" type="button">На главную</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/data.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
