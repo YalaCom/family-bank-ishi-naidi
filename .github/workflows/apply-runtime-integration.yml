@@ -1,0 +1,42 @@
+name: Apply Family Bank runtime integration
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - apply-runtime-integration.mjs
+      - .github/workflows/apply-runtime-integration.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Apply Family Bank same-origin runtime integration
+        run: node apply-runtime-integration.mjs
+      - name: Validate game JavaScript
+        run: |
+          node --check game/game.js
+          node --check game/js/data.js
+          node --check game/js/config.js
+      - name: Commit runtime integration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add game/game.js game/game.css game/index.html
+          if git diff --cached --quiet; then
+            echo "No runtime changes"
+          else
+            git commit -m "Connect Ishi-naidi to Family Bank backend"
+            git push
+          fi
