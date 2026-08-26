@@ -299,6 +299,15 @@
     if (u >= 1) camAnim = null;
   }
 
+  // SERVER_ROUND_FAMILY_BANK_V2 — реальный раунд выдаёт backend Family Bank.
+  function placedAt(obj, s, target) {
+    return {
+      id: obj.id, nx: s.nx, ny: s.ny, spawnId: s.id, target: !!target,
+      size: Math.max(42, Math.round(obj.size * (Number(s.scale) || 1))),
+      opacity: Number(s.opacity) || 1, rotate: Number(s.rotate) || 0,
+    };
+  }
+
   /* ------------------------------------------------------------------ */
   /* Round construction                                                  */
   /* ------------------------------------------------------------------ */
@@ -327,9 +336,7 @@
 
     const used = {};
     used[spawn.id] = true;
-    const placed = [
-      { id: targetId, nx: spawn.nx, ny: spawn.ny, spawnId: spawn.id, target: true, size: target.size },
-    ];
+    const placed = [placedAt(target, spawn, true)];
 
     const decoyPool = eligible.filter((id) => id !== targetId && !OBJECTS[id].rare);
     let guard = 0;
@@ -344,7 +351,7 @@
       const tooClose = placed.some((p) => Math.hypot(p.nx - s.nx, p.ny - s.ny) < C.MIN_SPAWN_DISTANCE);
       if (tooClose) continue;
       used[s.id] = true;
-      placed.push({ id: obj.id, nx: s.nx, ny: s.ny, spawnId: s.id, target: false, size: obj.size });
+      placed.push(placedAt(obj, s, false));
     }
 
     return {
@@ -361,6 +368,49 @@
       placed: placed,
       result: null,
       consumed: false,
+    };
+  }
+
+  function roundFromServer(raw) {
+    if (!raw || !raw.roundId) throw new Error("Сервер не вернул раунд");
+    const mapId = String(raw.mapId || "");
+    const targetId = String(raw.targetId || "");
+    const spawnId = String(raw.spawnId || "");
+    const map = MAPS[mapId];
+    const target = OBJECTS[targetId];
+    const spawns = SPAWNS[mapId] || [];
+    const spawn = spawns.find((s) => s.id === spawnId);
+    if (!map || !target || !spawn || !intersects(target.zones, spawn.zones)) throw new Error("Некорректный раунд");
+
+    const seed = Number(raw.seed) >>> 0;
+    const rng = mulberry32(seed ^ 0x9e3779b9);
+    const used = {};
+    used[spawn.id] = true;
+    const placed = [placedAt(target, spawn, true)];
+    const eligible = Object.keys(OBJECTS).filter((id) => {
+      const obj = OBJECTS[id];
+      return !obj.rare && spawns.some((s) => intersects(obj.zones, s.zones));
+    }).filter((id) => id !== targetId);
+
+    let guard = 0;
+    while (placed.length < C.DECOY_COUNT + 1 && guard < 180) {
+      guard++;
+      const id = eligible[Math.floor(rng() * eligible.length)];
+      if (!id || placed.some((p) => p.id === id)) continue;
+      const obj = OBJECTS[id];
+      const options = spawns.filter((s) => !used[s.id] && intersects(obj.zones, s.zones));
+      if (!options.length) continue;
+      const s = options[Math.floor(rng() * options.length)];
+      const tooClose = placed.some((p) => Math.hypot(p.nx - s.nx, p.ny - s.ny) < C.MIN_SPAWN_DISTANCE);
+      if (tooClose) continue;
+      used[s.id] = true;
+      placed.push(placedAt(obj, s, false));
+    }
+
+    return {
+      id: String(raw.roundId), mapId, targetId, spawnId, nx: Number(spawn.nx), ny: Number(spawn.ny),
+      seed, startedAt: Number(raw.startedAt) || Date.now(), mistakes: 0, hintsUsed: 0,
+      placed, result: null, consumed: false,
     };
   }
 
@@ -512,6 +562,8 @@
       img.style.width = p.size + "px";
       img.style.height = p.size + "px";
       img.style.objectFit = "contain";
+      img.style.opacity = String(p.opacity == null ? 1 : p.opacity);
+      img.style.setProperty("--spawn-rot", (p.rotate || 0) + "deg");
       layer.appendChild(img);
     });
 
@@ -839,18 +891,27 @@
       save.inProgress = null;
       persist();
     }
-    const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
-    const r = pickRound(seed);
-
-    if (typeof host.onRoundStart === "function") {
+    let r = null;
+    if (!host.demo && typeof host.onRoundStart === "function") {
       try {
-        const res = await host.onRoundStart(startPayload(r));
-        if (res === false || (res && res.ok === false)) {
-          toast((res && res.reason) || "Нельзя начать раунд");
+        const res = await host.onRoundStart({
+          game: C.GAME_ID, userId: save.userId, demo: false,
+          telegramInitData: host.telegram && host.telegram.initData ? host.telegram.initData : "",
+        });
+        if (!res || res.ok === false || !res.round) {
+          toast((res && (res.reason || res.error)) || "Нельзя начать раунд");
           if (remaining() <= 0) showLimit();
           return;
         }
-      } catch (_) {}
+        r = roundFromServer(res.round);
+        if (typeof res.attemptsLeft === "number") host.attemptsLeft = Math.max(0, res.attemptsLeft);
+      } catch (e) {
+        toast((e && e.message) || "Не удалось начать игру");
+        return;
+      }
+    } else {
+      const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
+      r = pickRound(seed);
     }
 
     if (C.CONSUME_ATTEMPT_ON_START) {

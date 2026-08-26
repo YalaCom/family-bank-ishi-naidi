@@ -380,7 +380,8 @@ img { display: block; max-width: 100%; }
 }
 .world-obj {
   position: absolute;
-  transform: translate(-50%, -70%);
+  /* SPAWN_ROTATION_FAMILY_BANK_V2 */
+  transform: translate(-50%, -70%) rotate(var(--spawn-rot, 0deg));
   pointer-events: none;
   /* HARD_OBJECT_BLEND_V2 */
   opacity: .92;
